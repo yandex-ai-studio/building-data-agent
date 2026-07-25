@@ -5,6 +5,7 @@ This is a repository for my talk on Building Data Exploration Agent using Yandex
 The talk consists of three parts:
 
 1. Learning how to work with LLM from Code using Responses API and OpenAI Agents SDK - open [AIStudio_Demo](notebooks/AIStudio_Demo.ipynb) and explore it.
+[![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/shwars/building-data-agent/blob/main/notebooks/AIStudio_Demo.ipynb)
 2. Understanding Agentic Loop using the Concept Drawing Example - explore [VibeDraw](apps/vibedraw/README.md) Application to see how the loop helps to get the job done.
 3. Switch to building text-based console coding agents using [ma](https://github.com/shwars/ma) shell. It allows you to talk to any agents created using OpenAI Agents SDK through pre-built text interface resembling Codex/Claude Code. A number of agents exploring different concepts is available in `agents` directory, and can be directly used from within `ma` environment.
 
