@@ -11,11 +11,13 @@ Use this skill when the user asks for a PDF report from markdown or when a repor
 
 Preferred workflow:
 
+0. Install fpdf library for PDF generation. Since .local is not writable in the container - use /tmp directory to do the install.
 1. Create or read the source markdown.
-2. Convert the markdown to PDF inside Code Interpreter.
-3. Use Python packages available in the container, such as `reportlab`, `markdown`, or another suitable converter. Install packages inside the container if necessary.
-4. Keep PDF layout simple and readable: title, section headings, paragraphs, tables, and embedded charts where useful.
-5. Save the PDF file and return it in the final answer.
+2. Make sure you create markdown in English, as there can be problems with using Cyrillic letters inside PDF.
+3. Convert the markdown to PDF inside Code Interpreter.
+4. Use Python packages available in the container, such as `reportlab`, `markdown`, or another suitable converter. Install packages inside the container if necessary.
+5. Keep PDF layout simple and readable: title, section headings, paragraphs, tables, and embedded charts where useful.
+6. Save the PDF file and return it in the final answer.
 
 Fallback workflow:
 

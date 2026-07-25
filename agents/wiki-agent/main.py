@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 import json
 import re
 import shutil
@@ -9,7 +8,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
-from agents import Agent, ModelSettings, StopAtTools, WebSearchTool, function_tool, handoff
+from agents import Agent, StopAtTools, WebSearchTool, function_tool, handoff
 
 
 # =============================================================================
@@ -417,14 +416,6 @@ def set_context(context: Any) -> None:
 
     researcher.tools = [WebSearchTool(), record_source, research_status, *context.todo_tools]
     agent.tools = [start_wiki, *context.clarification_tools]
-
-    for target in (agent, researcher, conceptualizer):
-        target.model = context.model
-        settings = target.model_settings or ModelSettings()
-        target.model_settings = dataclasses.replace(
-            settings,
-            reasoning=None if context.reasoning_level is None else {"effort": context.reasoning_level},
-        )
 
 
 def get_props() -> dict:
