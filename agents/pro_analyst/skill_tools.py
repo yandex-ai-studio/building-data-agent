@@ -1,125 +1,137 @@
 from __future__ import annotations
 
-import json
-import re
+from io import BytesIO
 from pathlib import Path
 from typing import Any
-
-from agents import function_tool
-
-_root = Path.cwd()
-_agent_dir = Path(__file__).resolve().parent
-_SAFE_SKILL_ID = re.compile(r"^[A-Za-z0-9_.-]+$")
+from zipfile import ZIP_DEFLATED, ZipFile
 
 
-def configure(root: Path | str | None = None, agent_dir: Path | str | None = None) -> None:
-    global _root, _agent_dir
-    if root is not None:
-        _root = Path(root).resolve()
-    if agent_dir is not None:
-        _agent_dir = Path(agent_dir).resolve()
+class SkillBundle:
+    def __init__(self, directory: Path, name: str, archive: bytes) -> None:
+        self.directory = directory
+        self.name = name
+        self.archive = archive
+
+    def upload_files(self) -> list[tuple[str, BytesIO, str]]:
+        return [
+            (
+                f"{self.directory.name}.zip",
+                BytesIO(self.archive),
+                "application/zip",
+            )
+        ]
 
 
-def _check_skill_id(skill_id: str) -> None:
-    if not _SAFE_SKILL_ID.match(skill_id):
-        raise ValueError(f"Unsafe skill id: {skill_id}")
-
-
-def _parse_scalar(value: str) -> Any:
-    value = value.strip()
-    if value.startswith("[") and value.endswith("]"):
-        items = value[1:-1].strip()
-        if not items:
-            return []
-        return [item.strip().strip("'\"") for item in items.split(",")]
-    return value.strip("'\"")
-
-
-def _parse_skill_file(path: Path) -> dict[str, Any]:
-    text = path.read_text(encoding="utf-8")
-    metadata: dict[str, Any] = {}
-    body = text
-    if text.startswith("---"):
-        parts = text.split("---", 2)
-        if len(parts) == 3:
-            _, frontmatter, body = parts
-            for line in frontmatter.splitlines():
-                if not line.strip() or line.lstrip().startswith("#") or ":" not in line:
-                    continue
-                key, value = line.split(":", 1)
-                metadata[key.strip()] = _parse_scalar(value)
-
-    skill_id = str(metadata.get("id") or path.parent.name)
-    _check_skill_id(skill_id)
-    metadata.setdefault("id", skill_id)
-    metadata.setdefault("name", skill_id.replace("_", " ").replace("-", " ").title())
-    metadata.setdefault("description", "")
-    metadata.setdefault("tags", [])
-    return {"metadata": metadata, "instructions": body.strip(), "path": path}
-
-
-def _candidate_files(base: Path) -> list[Path]:
-    candidates: list[Path] = []
-    skills_dir = base / "skills"
-    if skills_dir.is_dir():
-        candidates.extend(sorted(skills_dir.glob("*/skill.md")))
-    candidates.extend(sorted(path for path in base.glob("*/skill.md") if path.parent.name != "skills"))
-    return candidates
-
-
-def _discover() -> dict[str, dict[str, Any]]:
-    skills: dict[str, dict[str, Any]] = {}
-    for base, location in [(_agent_dir, "agent"), (_root, "current")]:
-        for path in _candidate_files(base):
-            parsed = _parse_skill_file(path)
-            metadata = dict(parsed["metadata"])
-            metadata["location"] = location
-            metadata["path"] = str(path)
-            skills[str(metadata["id"])] = {
-                "metadata": metadata,
-                "instructions": parsed["instructions"],
-            }
-    return skills
-
-
-def list_skill_metadata() -> str:
-    skills = _discover()
-    items = [
-        {
-            "id": skill["metadata"]["id"],
-            "name": skill["metadata"]["name"],
-            "description": skill["metadata"].get("description", ""),
-            "tags": skill["metadata"].get("tags", []),
-            "location": skill["metadata"].get("location", ""),
-        }
-        for skill in skills.values()
+def _manifest_path(skill_dir: Path) -> Path:
+    manifests = [
+        path
+        for path in skill_dir.rglob("*")
+        if path.is_file() and path.name.lower() == "skill.md"
     ]
-    items.sort(key=lambda item: item["id"])
-    return json.dumps({"skills": items}, ensure_ascii=False)
+    if len(manifests) != 1 or manifests[0].parent != skill_dir:
+        raise ValueError(
+            f"{skill_dir} must contain exactly one top-level SKILL.md; "
+            f"found {len(manifests)}."
+        )
+    return manifests[0]
 
 
-def load_skill_instructions(skill_id: str) -> str:
-    _check_skill_id(skill_id)
-    skills = _discover()
-    if skill_id not in skills:
-        return f"No skill found: {skill_id}"
-    skill = skills[skill_id]
-    return json.dumps(
-        {
-            "metadata": skill["metadata"],
-            "instructions": skill["instructions"],
-        },
-        ensure_ascii=False,
+def _skill_name(manifest: Path) -> str:
+    text = manifest.read_text(encoding="utf-8")
+    if not text.startswith("---"):
+        raise ValueError(f"{manifest} must start with YAML frontmatter.")
+
+    parts = text.split("---", 2)
+    if len(parts) != 3:
+        raise ValueError(f"{manifest} has incomplete YAML frontmatter.")
+
+    metadata: dict[str, str] = {}
+    for line in parts[1].splitlines():
+        if not line.strip() or line.lstrip().startswith("#") or ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        metadata[key.strip()] = value.strip().strip("'\"")
+
+    name = metadata.get("name", "")
+    description = metadata.get("description", "")
+    if not name or not description:
+        raise ValueError(f"{manifest} must define non-empty name and description fields.")
+    return name
+
+
+def _build_archive(skill_dir: Path) -> bytes:
+    files = sorted(
+        (path for path in skill_dir.rglob("*") if path.is_file()),
+        key=lambda path: path.relative_to(skill_dir).as_posix(),
     )
+    buffer = BytesIO()
+    with ZipFile(buffer, "w", ZIP_DEFLATED) as archive:
+        for path in files:
+            relative = path.relative_to(skill_dir)
+            archive.write(path, (Path(skill_dir.name) / relative).as_posix())
+    return buffer.getvalue()
 
 
-@function_tool
-def list_skills() -> str:
-    """List available skills from the current directory and the Pro Analyst agent folder."""
-    return list_skill_metadata()
+def discover_skills(skills_dir: Path | str) -> list[SkillBundle]:
+    root = Path(skills_dir).resolve()
+    if not root.is_dir():
+        raise ValueError(f"Skills directory does not exist: {root}")
+
+    skill_dirs = sorted(
+        (path for path in root.iterdir() if path.is_dir()),
+        key=lambda path: path.name,
+    )
+    if not skill_dirs:
+        raise ValueError(f"No skill directories found in {root}")
+
+    bundles = [
+        SkillBundle(
+            directory=skill_dir,
+            name=_skill_name(_manifest_path(skill_dir)),
+            archive=_build_archive(skill_dir),
+        )
+        for skill_dir in skill_dirs
+    ]
+
+    names = [bundle.name for bundle in bundles]
+    duplicates = sorted({name for name in names if names.count(name) > 1})
+    if duplicates:
+        raise ValueError(f"Duplicate local skill names: {', '.join(duplicates)}")
+    return bundles
 
 
-@function_tool
-def load_skill(skill_id: str) -> str:
-    """Load full instructions for one skill by skill id."""
-    return load_skill_instructions(skill_id)
+def sync_skills(client: Any, skills_dir: Path | str) -> list[dict[str, str]]:
+    bundles = discover_skills(skills_dir)
+    existing_by_name: dict[str, Any] = {}
+    for skill in client.skills.list(order="desc", limit=100):
+        existing_by_name.setdefault(str(skill.name), skill)
+
+    references: list[dict[str, str]] = []
+    for bundle in bundles:
+        existing = existing_by_name.get(bundle.name)
+        try:
+            if existing is None:
+                uploaded = client.skills.create(files=bundle.upload_files())
+                skill_id = str(uploaded.id)
+                version = str(uploaded.default_version)
+            else:
+                uploaded = client.skills.versions.create(
+                    str(existing.id),
+                    default=True,
+                    files=bundle.upload_files(),
+                )
+                skill_id = str(existing.id)
+                version = str(uploaded.version)
+        except Exception as error:
+            raise RuntimeError(
+                f"Failed to upload cloud skill {bundle.name}: {error}"
+            ) from error
+
+        references.append(
+            {
+                "type": "skill_reference",
+                "skill_id": skill_id,
+                "version": version,
+            }
+        )
+    return references

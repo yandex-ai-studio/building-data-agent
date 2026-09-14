@@ -5,12 +5,11 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-from agents import Agent, CodeInterpreterTool, ShellTool
+from agents import Agent, CodeInterpreterTool
 
 _context: Any = None
 _container_id: str | None = None
 _container_client: Any = None
-_skill_cache: dict[int, tuple[Any, list[dict[str, str]]]] = {}
 _agent_dir = Path(__file__).resolve().parent
 
 
@@ -36,17 +35,20 @@ write_file = _filesystem_tools.write_file
 edit_file = _filesystem_tools.edit_file
 execute_command = _filesystem_tools.execute_command
 
-sync_skills = _skill_tools.sync_skills
+configure_skills = _skill_tools.configure
+list_skill_metadata = _skill_tools.list_skill_metadata
+list_skills = _skill_tools.list_skills
+load_skill = _skill_tools.load_skill
 
 
 BASE_INSTRUCTIONS = """
 You are Pro Analyst, an advanced local-data analyst and report-building agent.
 ALWAYS reason and answer in ENGLISH only.
 
-You can work with local files, cloud-hosted reusable skills, safe command execution, and Code Interpreter.
+You can work with local files, reusable markdown skills, safe command execution, and Code Interpreter.
 
 Local data workflow:
-1. Before substantive work, review the skill names and descriptions exposed by the hosted Shell tool when it is available.
+1. Before exploring data, first review the Available skills snapshot already included in these instructions.
 2. Use ls to discover relevant files in the current working directory.
 3. Use inspect for CSV/XLS/XLSX files before analysis.
 4. Use read_file when a text file, markdown file, script, or config matters.
@@ -58,12 +60,13 @@ Planning workflow:
 3. Use TODOs to keep long-running analysis visible to the user.
 
 Skills workflow:
-1. Skills are attached to the hosted Shell tool by Yandex AI Studio.
-2. At the start of analytical, reporting, document-generation, presentation, PDF, or data exploration work, review the available skill metadata.
-3. If a skill applies, use Shell to open its SKILL.md before following its workflow.
-4. Treat SKILL.md as instructions. Use skill-provided scripts and resources inside the Shell container when needed.
-5. The Shell container is separate from the local working directory and the Code Interpreter container. Use local tools for current-directory files and Code Interpreter for uploaded data and generated artifacts.
-6. If no skill applies or Shell is unavailable, proceed with the other available tools.
+1. Skill metadata is loaded into the Available skills snapshot before each run/context update.
+2. At the very start of every non-trivial analytical, reporting, document-generation, presentation, PDF, or data exploration request, review that snapshot before using ls, inspect, read_file, upload, or Code Interpreter.
+3. Do not reload skill metadata during execution. Do not call list_skills unless the user explicitly asks to inspect available skills.
+4. If a skill from the snapshot is relevant, call load_skill(skill_id) before following it.
+5. If no skill applies, briefly proceed without one.
+6. Treat skills as instructions, not executable plugins.
+7. Current-directory skills override bundled skills at context-build time.
 
 Code Interpreter workflow:
 1. Always upload every local data file needed for analysis before running any Code Interpreter code that reads data using upload tool.
@@ -78,33 +81,27 @@ Code Interpreter workflow:
 Command workflow:
 1. execute_command is available only for cmd, bash, and ssh.
 2. Use Code Interpreter for analysis code.
-3. Use local command execution only for existing utilities, lightweight checks, or workflows requested by a cloud skill.
+3. Use local command execution only for existing utilities, lightweight checks, or workflows requested by a loaded skill.
 
 Be careful, explain assumptions and data quality issues, and ask clarifying questions when the requested deliverable is underspecified.
 """.strip()
 
 
+def skill_metadata_snapshot() -> str:
+    return f"""
+
+Available skills snapshot:
+{list_skill_metadata()}
+
+Review this snapshot at the start of substantive analytical/reporting work before exploring data. Do not refresh skill metadata during execution. Call load_skill(skill_id) before applying a skill from the snapshot.
+""".rstrip()
+
+
 agent = Agent(
     name="ProAnalyst",
     instructions=BASE_INSTRUCTIONS,
-    tools=[ls, inspect, read_file],
+    tools=[ls, inspect, read_file, list_skills, load_skill],
 )
-
-
-def ensure_skill_references(context: Any) -> list[dict[str, str]]:
-    if context.client is None:
-        return []
-
-    cache_key = id(context.client)
-    cached = _skill_cache.get(cache_key)
-    if cached is not None and cached[0] is context.client:
-        return list(cached[1])
-
-    references = sync_skills(context.client, _agent_dir / "skills")
-    _skill_cache[cache_key] = (context.client, references)
-    context.log(f"Pro Analyst synced {len(references)} cloud skills.")
-    return list(references)
-
 
 def ensure_container(context: Any) -> str | None:
     global _container_id, _container_client
@@ -123,8 +120,9 @@ def ensure_container(context: Any) -> str | None:
 def set_context(context: Any) -> None:
     global _context
     _context = context
-    context.log("Calling set_context")
-    agent.instructions = BASE_INSTRUCTIONS
+    context.log(f"Calling set_context")
+    configure_skills(root=Path.cwd(), agent_dir=_agent_dir)
+    agent.instructions = BASE_INSTRUCTIONS + skill_metadata_snapshot()
 
     base_tools = [
         ls,
@@ -133,40 +131,32 @@ def set_context(context: Any) -> None:
         write_file,
         edit_file,
         execute_command,
+        list_skills,
+        load_skill,
         *context.todo_tools,
         *context.clarification_tools,
     ]
 
     if context.client is None:
-        ensure_skill_references(context)
-        ensure_container(context)
         configure_filesystem(root=Path.cwd(), client=None, container_id=None)
         agent.tools = base_tools
-        context.log(
-            "Pro Analyst needs Yandex folder_id/api_key to use cloud Skills, Shell, and Code Interpreter."
-        )
+        context.log("Pro Analyst needs Yandex folder_id/api_key to use Code Interpreter.")
         return
 
-    skill_references = ensure_skill_references(context)
     container_id = ensure_container(context)
-    configure_filesystem(root=Path.cwd(), client=context.client, container_id=container_id)
+    context.log(f"Pro Analyst Code Interpreter container: {container_id}")
+    configure_filesystem(root=Path.cwd(), client=context.client, cocontainer_id=container_id)
 
     agent.tools = [
         *base_tools,
         upload,
-        ShellTool(
-            environment={
-                "type": "container_auto",
-                "skills": skill_references,
-            }
-        ),
         CodeInterpreterTool(tool_config={"type": "code_interpreter", "container": container_id}),
     ]
 
 
 def get_props() -> dict:
     props = {
-        "display_name": "Pro Analyst",
+        "display_name": "Pro Analyst MS",
         "uses_notes": False,
         "uses_todo": True,
     }
