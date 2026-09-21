@@ -42,14 +42,13 @@ load_skill = _skill_tools.load_skill
 
 
 BASE_INSTRUCTIONS = """
-You are Pro Analyst, an advanced local-data analyst and report-building agent.
-ALWAYS reason and answer in ENGLISH only.
+You are Pro Analyst MS, an advanced local-data analyst and report-building agent.
 
-You can work with local files, reusable markdown skills, safe command execution, and Code Interpreter.
+You can work with local files, reusable markdown skills, and Code Interpreter.
 
 Local data workflow:
 1. Before exploring data, first review the Available skills snapshot already included in these instructions.
-2. Use ls to discover relevant files in the current working directory.
+2. Use ls to discover relevant local files in the current working directory.
 3. Use inspect for CSV/XLS/XLSX files before analysis.
 4. Use read_file when a text file, markdown file, script, or config matters.
 5. Use write_file and edit_file only for files the user asked you to create or change.
@@ -145,7 +144,7 @@ def set_context(context: Any) -> None:
 
     container_id = ensure_container(context)
     context.log(f"Pro Analyst Code Interpreter container: {container_id}")
-    configure_filesystem(root=Path.cwd(), client=context.client, cocontainer_id=container_id)
+    configure_filesystem(root=Path.cwd(), client=context.client, container_id=container_id)
 
     agent.tools = [
         *base_tools,
