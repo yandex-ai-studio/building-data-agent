@@ -1,58 +1,63 @@
-# Building Your Own Data Exploration Agent
+# Создание собственного агента для исследования данных
 
-This is a repository for my talk on Building Data Exploration Agent using Yandex AI Studio, Responses API and OpenAI Agents SDK.
+[English Version](README_en.md)
 
-The talk consists of three parts:
+[Инструкции для воркшопа на SCALE 2026](README_scale.md)
 
-1. Learning how to work with LLM from Code using Responses API and OpenAI Agents SDK - open [AIStudio_Demo](notebooks/AIStudio_Demo.ipynb) and explore it.
+Это репозиторий с материалами к докладу о создании агента для исследования данных с помощью Yandex AI Studio, Responses API и OpenAI Agents SDK.
+
+Доклад состоит из трёх частей:
+
+1. Знакомство с программной работой с LLM при помощи Responses API и OpenAI Agents SDK — откройте [AIStudio_Demo](notebooks/AIStudio_Demo.ipynb) и изучите его.
 [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/yandex-ai-studio/building-data-agent/blob/main/notebooks/AIStudio_Demo.ipynb)
-2. Understanding Agentic Loop using the Concept Drawing Example - explore [VibeDraw](apps/vibedraw/README.md) Application to see how the loop helps to get the job done.
-3. Switch to building text-based console coding agents using [ma](https://github.com/shwars/ma) shell. It allows you to talk to any agents created using OpenAI Agents SDK through pre-built text interface resembling Codex/Claude Code. A number of agents exploring different concepts is available in `agents` directory, and can be directly used from within `ma` environment.
+2. [Опционально] Создание текстовой оболочки для агентов с помощью вайб-кодинга с Codex на основе [Idea File](ideas/text-shell.md)
+3. Переход к созданию текстовых консольных агентов для программирования с помощью созданной ранее оболочки, или оболочки [ma](https://github.com/shwars/ma). Она позволяет общаться с любыми агентами, созданными на основе OpenAI Agents SDK, через готовый текстовый интерфейс, похожий на Codex/Claude Code. В каталоге `agents` находится несколько агентов, демонстрирующих различные концепции; их можно запускать непосредственно в среде `ma`.
 
-> Source code of text-based interface is not included into this repository, but you can always find it [on GitHub](https://github.com/shwars/ma).
+> Исходный код текстового интерфейса не входит в этот репозиторий, но его всегда можно найти [на GitHub](https://github.com/shwars/ma).
 
-As a result, we would build an agent for data exploration, that will be able to:
+В результате мы создадим агента для исследования данных, который сможет:
 
-1. Take any data files (XLSX/CSV) from current directory, explore them and upload into code interpreter for processing
-2. Analyze those file using code interpreter, building derived artifacts, including graphs and simple ML models.
-3. Download those artifacts back to the user's computer.
+1. Брать любые файлы данных (XLSX/CSV) из текущего каталога, исследовать их и загружать в Code Interpreter для обработки.
+2. Анализировать эти файлы с помощью Code Interpreter и создавать производные артефакты, включая графики и простые модели машинного обучения.
+3. Скачивать полученные артефакты обратно на компьютер пользователя.
 
-## Setting up MA
+## Настройка MA
 
-You would need to do the first-time setup of the `ma` console agent shell. The easiest way to do it is using [uv](https://docs.astral.sh/uv/) package manager:
+Сначала необходимо настроить консольную оболочку агентов `ma`. Проще всего сделать это с помощью менеджера пакетов [uv](https://docs.astral.sh/uv/):
 
-1. Install `uv` ([instruction](https://docs.astral.sh/uv/getting-started/installation/)):
+1. Установите `uv` ([инструкция](https://docs.astral.sh/uv/getting-started/installation/)):
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
-2. Install `ma` ([instruction](https://github.com/shwars/ma#run-from-github)):
+2. Установите `ma` ([инструкция](https://github.com/shwars/ma#run-from-github)):
 ```bash
 uv tool install git+https://github.com/shwars/ma
 ```
-3. Clone this repository into some working directory:
+3. Клонируйте этот репозиторий в рабочий каталог:
 ```bash
 git clone https://github.com/shwars/building-data-agent
 cd ma-agent
 ```
-`ma` will be able to work with agents located in `agents` subdirectory.
-4. Set `folder_id` and `api_key` environment variables, or place `.env` file into the current directory that looks like this:
+`ma` сможет работать с агентами, расположенными в подкаталоге `agents`.
+4. Задайте переменные окружения `folder_id` и `api_key` либо поместите в текущий каталог файл `.env` следующего вида:
 ```
 folder_id=...
 api_key=...
 ```
-5. Start `ma`:
+5. Запустите `ma`:
 ```bash
 ma
 ```
-6. Use commands to select LLM and agent:
+6. Выберите LLM и агента с помощью команд:
 ```
 /model Deepseek V4 Flash
 /agent
 ```
-7. Start the dialog and enjoy!
+7. Начните диалог — и приятной работы!
 
-## About the Talk
+## О докладе
 
-The talk based on this repository has been delivered at:
+Практикум на основе этого репозитория проводился на следующих мероприятиях:
 
-* [SMILES-2026](https://smiles.skoltech.ru/) Summer Workshop at Suzhou, China
+* конференция [Yandex Scale 2026](https://scale.yandex.cloud/) [![GitHub Release](https://img.shields.io/github/v/release/yandex-ai-studio/advanced-assistant?filter=v2)](https://github.com/yandex-ai-studio/advanced-assistant/tree/v2)
+* летняя школа [SMILES-2026](https://smiles.skoltech.ru/) в Сучжоу, Китай [![GitHub Release](https://img.shields.io/github/v/release/yandex-ai-studio/advanced-assistant?filter=v1)](https://github.com/yandex-ai-studio/advanced-assistant/tree/v1)
