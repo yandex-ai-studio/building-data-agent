@@ -3,3 +3,4 @@ openai-agents
 python-dotenv
 Pillow
 playwright
+git+https://github.com/yandex-ai-studio/yhelpers
