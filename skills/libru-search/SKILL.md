@@ -9,7 +9,28 @@ Work in a Unix environment. Prefer `python3`, `curl`, `iconv`, `rg`/`grep`, `sor
 
 Resolve this skill's directory as `SKILL_DIR`; the reusable commands live in `scripts/` below it.
 
-## Find a book
+## Find Russian classics
+
+For Russian classic authors and works, search Lib.ru's classic collection at `http://az.lib.ru/` first:
+
+```sh
+python3 "$SKILL_DIR/scripts/search_azlib.py" "title or author fragment" --limit 10 --timeout 15
+```
+
+The script makes one HTTP GET request to `http://az.lib.ru/cgi-bin/seek`, encodes the query as Windows-1251, and emits UTF-8 TSV. It does not follow result pages or crawl the catalog. Verify a promising result on its work or author page. If the classic search has no suitable match, fall back to the general Lib.ru search below.
+
+The classic collection also supports browsing:
+
+- Search form: `http://az.lib.ru/cgi-bin/seek`
+- Genres: `http://az.lib.ru/janr/`
+- Literary forms: `http://az.lib.ru/type/`
+- Literary affiliation and periods: `http://az.lib.ru/rating/litarea/`
+- Ratings: `http://az.lib.ru/rating/top40/` and `http://az.lib.ru/rating/top100/`
+- New additions: `http://az.lib.ru/long.shtml`
+
+Genre and form pages offer views sorted by rating, update time, year, title, and reader count. Use these indexes when a fragment search is too broad or the user wants to browse rather than identify one work.
+
+## Find other books
 
 Search by a distinctive title fragment first:
 
@@ -37,7 +58,7 @@ Retry a surname, initials, and `е`/`ё` variants. Absence from this catalog is 
 Download and search only the likely indexes; do not crawl every section. Inspect `Content-Type` and convert Windows-1251 or KOI8-R pages to UTF-8 before local searching. Wait at least three seconds between catalog requests, as required by `https://lib.ru/robots.txt`.
 
 - Discovery and satellites: `https://lib.ru/What-s-new`, `https://lib.ru/HITPARAD/`, `https://samlib.ru/`, `https://music.lib.ru/`, `https://www.artlib.ru/`, `https://world.lib.ru/`, `https://turizm.lib.ru/`, `https://artofwar.ru/`, `https://okopka.ru/`.
-- Author hubs and classics: `https://lit.lib.ru/`, `https://fan.lib.ru/`, `https://det.lib.ru/`, `https://az.lib.ru/`.
+- Author hubs: `https://lit.lib.ru/`, `https://fan.lib.ru/`, `https://det.lib.ru/`. Use the dedicated HTTP workflow above for classics at `az.lib.ru`.
 - Prose and poetry: `/POEZIQ/`, `/PROZA/`, `/RUSSLIT/`, `/LITRA/`, `/SU/`, `/PXESY/`, `/NEWPROZA/`, `/INPROZ/`.
 - Ancient literature: `/INOOLD/`, `/POEEAST/`, `/POECHIN/`.
 - Children and adventure: `/TALES/`, `/PRIKL/`.
