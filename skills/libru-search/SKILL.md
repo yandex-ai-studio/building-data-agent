@@ -82,7 +82,7 @@ trap 'rm -rf -- "$tmpdir"' EXIT
 python3 "$SKILL_DIR/scripts/fetch_libru_text.py" "$work_url" "$tmpdir/book.txt"
 ```
 
-The downloader accepts Lib.ru and its subdomains, prefers the plain-text `_Ascii.txt` representation for `.txt` works, honors the declared legacy charset, and writes UTF-8 without overwriting an existing file.
+The downloader accepts Lib.ru and its subdomains, prefers the plain-text `_Ascii.txt` representation for `.txt` works, extracts both ordinary preformatted pages and `az.lib.ru` classic pages, honors the declared legacy charset, and writes UTF-8 without overwriting an existing file.
 
 Use local pipelines for counts, concordances, and frequency tables. For example, `rg -o '\p{L}+'`, `awk`, `sort`, and `uniq -c` are suitable for a simple word-frequency task; use a short Python program when Unicode tokenization or lemmatization needs more control. Never paste or read the entire work into the conversation for a mechanical calculation.
 

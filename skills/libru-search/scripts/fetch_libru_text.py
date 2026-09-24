@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from html.parser import HTMLParser
 from pathlib import Path
@@ -16,35 +17,109 @@ USER_AGENT = "libru-search-skill/1.0"
 MAX_RESPONSE_BYTES = 50 * 1024 * 1024
 
 
-class PreformattedTextParser(HTMLParser):
+class WorkTextParser(HTMLParser):
+    BLOCK_TAGS = {"dd", "div", "h1", "h2", "h3", "h4", "h5", "h6", "li", "p"}
+    SKIP_TAGS = {"form", "script", "select", "style"}
+
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.pre_depth = 0
+        self.heading_depth = 0
+        self.classic_depth = 0
+        self.in_definition = False
         self.skip_depth = 0
-        self.parts: list[str] = []
+        self.pre_parts: list[str] = []
+        self.heading_parts: list[str] = []
+        self.classic_parts: list[str] = []
+        self.definition_parts: list[str] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         tag = tag.lower()
-        if tag in {"script", "style", "form", "select"}:
+        if tag in self.SKIP_TAGS:
             self.skip_depth += 1
-        elif tag == "pre":
+            return
+        if self.skip_depth:
+            return
+
+        if tag == "pre":
             self.pre_depth += 1
-        elif tag == "br" and self.pre_depth and not self.skip_depth:
-            self.parts.append("\n")
+        elif tag == "h2" and not self.classic_depth:
+            self.heading_depth += 1
+        elif tag == "noindex":
+            self.classic_depth += 1
+        elif tag == "dd":
+            if self.in_definition and self.definition_parts:
+                self.definition_parts.append("\n\n")
+            self.in_definition = True
+
+        if tag == "br":
+            if self.pre_depth:
+                self.pre_parts.append("\n")
+            if self.heading_depth:
+                self.heading_parts.append("\n")
+            if self.classic_depth:
+                self.classic_parts.append("\n")
+            if self.in_definition:
+                self.definition_parts.append("\n")
+        elif tag in self.BLOCK_TAGS and self.classic_depth:
+            self.classic_parts.append("\n\n")
 
     def handle_endtag(self, tag: str) -> None:
         tag = tag.lower()
-        if tag in {"script", "style", "form", "select"} and self.skip_depth:
+        if tag in self.SKIP_TAGS and self.skip_depth:
             self.skip_depth -= 1
-        elif tag == "pre" and self.pre_depth:
+            return
+        if self.skip_depth:
+            return
+
+        if tag == "pre" and self.pre_depth:
             self.pre_depth -= 1
+        elif tag == "h2" and self.heading_depth:
+            self.heading_depth -= 1
+        elif tag == "noindex" and self.classic_depth:
+            self.classic_parts.append("\n\n")
+            self.classic_depth -= 1
+        elif tag == "dd" and self.in_definition:
+            self.definition_parts.append("\n\n")
+            self.in_definition = False
+        elif tag == "dl" and self.in_definition:
+            self.definition_parts.append("\n\n")
+            self.in_definition = False
+
+        if tag in self.BLOCK_TAGS and self.classic_depth:
+            self.classic_parts.append("\n\n")
 
     def handle_data(self, data: str) -> None:
-        if self.pre_depth and not self.skip_depth:
-            self.parts.append(data)
+        if self.skip_depth:
+            return
+        if self.pre_depth:
+            self.pre_parts.append(data)
+        if self.heading_depth:
+            self.heading_parts.append(data)
+        if self.classic_depth:
+            self.classic_parts.append(data)
+        if self.in_definition:
+            self.definition_parts.append(data)
+
+    @staticmethod
+    def clean_blocks(parts: list[str]) -> str:
+        text = "".join(parts)
+        text = re.sub(r"[ \t]+\n", "\n", text)
+        text = re.sub(r"\n[ \t]+", "\n", text)
+        text = re.sub(r"\n{3,}", "\n\n", text)
+        return text.strip()
 
     def text(self) -> str:
-        return "".join(self.parts).strip()
+        preformatted = "".join(self.pre_parts).strip()
+        if preformatted:
+            return preformatted
+
+        classic = self.clean_blocks(self.classic_parts)
+        if classic:
+            heading = self.clean_blocks(self.heading_parts)
+            return f"{heading}\n\n{classic}" if heading else classic
+
+        return self.clean_blocks(self.definition_parts)
 
 
 def is_libru_host(hostname: str | None) -> bool:
@@ -106,11 +181,11 @@ def decode_text(data: bytes, charset: str | None) -> str:
 
 def extract_text(decoded: str, content_type: str) -> str:
     if content_type == "text/html":
-        parser = PreformattedTextParser()
+        parser = WorkTextParser()
         parser.feed(decoded)
         text = parser.text()
         if not text:
-            raise ValueError("HTML page contains no preformatted work text")
+            raise ValueError("HTML page contains no supported work text")
     elif content_type.startswith("text/") or content_type in {
         "application/octet-stream",
         "application/x-empty",
