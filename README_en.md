@@ -57,5 +57,5 @@ ma
 
 The workshop based on this repository has been delivered at:
 
-* [Yandex Scale 2026](https://scale.yandex.cloud/) Conference [![GitHub Release](https://img.shields.io/github/v/release/yandex-ai-studio/advanced-assistant?filter=v2)](https://github.com/yandex-ai-studio/advanced-assistant/tree/v2)
-* [SMILES-2026](https://smiles.skoltech.ru/) Summer Workshop at Suzhou, China [![GitHub Release](https://img.shields.io/github/v/release/yandex-ai-studio/advanced-assistant?filter=v1)](https://github.com/yandex-ai-studio/advanced-assistant/tree/v1)
+* [Yandex Scale 2026](https://scale.yandex.cloud/) [![GitHub Release](https://img.shields.io/github/v/release/yandex-ai-studio/building-data-agent?filter=v2)](https://github.com/yandex-ai-studio/building-data-agent/tree/v2)
+* [SMILES-2026](https://smiles.skoltech.ru/) Summer School in Suzhou, China [![GitHub Release](https://img.shields.io/github/v/release/yandex-ai-studio/building-data-agent?filter=v1)](https://github.com/yandex-ai-studio/building-data-agent/tree/v1)
