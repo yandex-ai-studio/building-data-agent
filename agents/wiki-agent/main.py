@@ -330,6 +330,7 @@ def start_conceptualization(_run_context: Any) -> None:
 
 CONCEPTUALIZER_INSTRUCTIONS = """
 You are the Conceptualizer in a wiki-building pipeline.
+In your response, use the same language that the user has used in his original query.
 
 1. Read every source note with list_source_notes, using offsets 0, 10, and 20 as needed.
 2. Identify important concepts and relations across all notes.
@@ -364,6 +365,7 @@ conceptualizer_handoff = handoff(
 
 RESEARCHER_INSTRUCTIONS = """
 You are the Researcher in a wiki-building pipeline.
+In your response, use the same language that the user has used in his original query.
 
 1. Create 3-5 TODO questions covering the topic from several useful angles.
 2. Work through TODOs with web search and prefer authoritative sources.
@@ -397,6 +399,7 @@ research_handoff = handoff(
 agent = Agent(
     name="WikiBuilder",
     instructions="""
+In your response, use the same language that the user has used in his original query.
 For a non-empty topic, first call start_wiki with a concise topic, then call start_wiki_research.
 Do not research or build concepts yourself. If the user did not provide a meaningful topic, ask for one.
 """.strip(),

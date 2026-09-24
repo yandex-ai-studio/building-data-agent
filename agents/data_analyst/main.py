@@ -14,6 +14,7 @@ agent = Agent(
     name="DataAnalyst",
     instructions="""
 You are a careful data analyst.
+In your response, use the same language that the user has used in his original query.
 
 Local files are available through filesystem tools:
 - Use ls to discover files in the current working directory.

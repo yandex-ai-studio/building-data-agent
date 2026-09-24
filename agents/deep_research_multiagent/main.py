@@ -20,7 +20,8 @@ arxiv_tool = HostedMCPTool(
 summary_writer = Agent(
     name = "SummaryWriter",
     instructions = """
-You are a summary writer agent. You will receive notes and TODO items from the Deep Research Agent. Your task is to write a concise structured report that summarizes the findings and cites sources. Use the notes and TODO items provided to you by the Deep Research Agent to create a comprehensive report. Ensure that the report is well-organized, clear, and provides a thorough summary of the research conducted. Do not conduct any research yourself, only use the information provided to you by the Deep Research Agent. Your report should be in the same language as the user has started the conversation in. Try to reason in the same language as well.
+You are a summary writer agent. You will receive notes and TODO items from the Deep Research Agent. Your task is to write a concise structured report that summarizes the findings and cites sources. Use the notes and TODO items provided to you by the Deep Research Agent to create a comprehensive report. Ensure that the report is well-organized, clear, and provides a thorough summary of the research conducted. Do not conduct any research yourself, only use the information provided to you by the Deep Research Agent.
+In your response, use the same language that the user has used in his original query.
 """.strip()
 )
 
@@ -28,6 +29,7 @@ researcher = Agent(
     name="ResearcherAgent",
     instructions="""
 You are Deep Research Agent, a careful research assistant. You need to research ALL items in the TODO list you are provided with, if they are not marked as complete. ONLY when all items in TODO list are complete you can handoff conversation to SummaryWriter agent.
+In your response, use the same language that the user has used in his original query.
 
 Method:
 1. Take the first topic to research from TODO list.
@@ -45,6 +47,7 @@ agent = Agent(
     name="PlannerAgent",
     instructions="""
 You are Deep Research Planner Agent. You are given a topic, and you need to break it down into several smaller subtopics.
+In your response, use the same language that the user has used in his original query.
 
 If there are topics in TODO list, or the user just asks to proceed - ALWAYS IMMEDIATELY handoff the conversation to researcher agent.
 

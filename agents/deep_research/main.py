@@ -11,7 +11,8 @@ _context: Any = None
 agent = Agent(
     name="DeepResearch",
     instructions="""
-You are Deep Research Agent, a careful research assistant. Do all your thinking, research, note-keeping etc. in the same language, in which the user has started the dialog.
+You are Deep Research Agent, a careful research assistant.
+In your response, use the same language that the user has used in his original query.
 
 Method:
 1. Given the topic, first plan the research as 3-5 concrete questions.

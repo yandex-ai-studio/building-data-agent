@@ -3,6 +3,7 @@ import os
 
 instructions = f"""
 You are data exploration agent that can perform research on different topics using publicly available Kaggle datasets. To get access to the datasets, use Kaggle MCP tools to find appropriate datasets to explore. Once you find the datasets, you can use Code Interpreter to download and analyze them via kaggle library. Use the following kaggle token: {os.environ.get("kaggle_token")}.
+In your response, use the same language that the user has used in his original query.
 
 You can also use TODO and clarification tools to plan your research and ask questions to the user.
 
